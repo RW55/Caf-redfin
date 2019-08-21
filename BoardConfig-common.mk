@@ -31,8 +31,6 @@ TARGET_2ND_CPU_ABI := armeabi-v7a
 TARGET_2ND_CPU_ABI2 := armeabi
 TARGET_2ND_CPU_VARIANT := cortex-a76
 
-BUILD_BROKEN_ENG_DEBUG_TAGS := true
-
 TARGET_BOARD_COMMON_PATH := device/google/redfin/sm7250
 
 BOARD_KERNEL_CMDLINE += console=ttyMSM0,115200n8 androidboot.console=ttyMSM0 printk.devkmsg=on
@@ -192,10 +190,6 @@ SF_VSYNC_EVENT_PHASE_OFFSET_NS := 6000000
 TARGET_USES_DISPLAY_RENDER_INTENTS := true
 TARGET_USES_COLOR_METADATA := true
 TARGET_USES_DRM_PP := true
-
-# Misc
-TARGET_USES_HARDWARE_QCOM_BOOTCTRL := true
-
 
 # Vendor Interface Manifest
 DEVICE_MANIFEST_FILE := device/google/redfin/manifest.xml
