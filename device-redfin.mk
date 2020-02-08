@@ -115,6 +115,20 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     android.hardware.vibrator@1.3-service.redfin
 
+# DRV2624 Haptics Waveform
+PRODUCT_COPY_FILES += \
+    device/google/redfin/vibrator/drv2624/drv2624.bin:$(TARGET_COPY_OUT_VENDOR)/firmware/drv2624.bin
+
+# Vibrator HAL
+PRODUCT_PRODUCT_PROPERTIES +=\
+    ro.vibrator.hal.config.dynamic=1 \
+    ro.vibrator.hal.click.duration=8 \
+    ro.vibrator.hal.tick.duration=8 \
+    ro.vibrator.hal.heavyclick.duration=8 \
+    ro.vibrator.hal.long.voltage=161 \
+    ro.vibrator.hal.long.frequency.shift=0 \
+    ro.vibrator.hal.steady.shape=1
+
 # Dumpstate HAL
 PRODUCT_PACKAGES += \
     android.hardware.dumpstate@1.0-service.redfin
@@ -160,7 +174,7 @@ PRODUCT_COPY_FILES += \
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_idle_timer_ms=80
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_touch_timer_ms=200
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_display_power_timer_ms=1000
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.use_smart_90_for_video=true
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.use_content_detection_for_refresh_rate=true
 
 # High fps sf early and early gl phase offset
 # The default sf phase offset is set to 6ms, to avoid it be included into next
