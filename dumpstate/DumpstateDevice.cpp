@@ -157,12 +157,25 @@ void DumpstateDevice::dumpModem(int fd, int fdModem)
 
     RunCommandToFd(fd, "MKDIR MODEM LOG", {"/vendor/bin/mkdir", "-p", modemLogAllDir.c_str()}, CommandOptions::WithTimeout(2).Build());
 
+    const std::string diagLogDir = "/data/vendor/radio/diag_logs/logs";
+    const std::string diagPoweronLogPath = "/data/vendor/radio/diag_logs/logs/diag_poweron_log.qmdl";
+
+    if (isModemLoggingEnabled()) {
+        if (isModemLoggingRunning()) {
+            ALOGD("diag_mdlog is running");
+        } else {
+            ALOGD("diag_mdlog is not running");
+        }
+
+        dumpLogs(fd, diagLogDir, modemLogAllDir, android::base::GetIntProperty(DIAG_MDLOG_NUMBER_BUGREPORT, 100), DIAG_LOG_PREFIX);
+    }
+    RunCommandToFd(fd, "CP MODEM POWERON LOG", {"/vendor/bin/cp", diagPoweronLogPath.c_str(), modemLogAllDir.c_str()}, CommandOptions::WithTimeout(2).Build());
+
     if (!PropertiesHelper::IsUserBuild()) {
         char cmd[256] = { 0 };
 
         android::base::SetProperty(MODEM_EFS_DUMP_PROPERTY, "true");
 
-        const std::string diagLogDir = "/data/vendor/radio/diag_logs/logs";
         const std::string tcpdumpLogDir = "/data/vendor/tcpdump_logger/logs";
         const std::string extendedLogDir = "/data/vendor/radio/extended_logs";
         const std::vector <std::string> rilAndNetmgrLogs
@@ -183,23 +196,12 @@ void DumpstateDevice::dumpModem(int fd, int fdModem)
                 "/data/vendor/radio/power_anomaly_data.txt",
                 "/data/vendor/radio/diag_logs/diag_trace.txt",
                 "/data/vendor/radio/diag_logs/diag_trace_old.txt",
-                "/data/vendor/radio/diag_logs/logs/diag_poweron_log.qmdl",
                 "/data/vendor/radio/metrics_data",
                 "/data/vendor/ssrlog/ssr_log.txt",
                 "/data/vendor/ssrlog/ssr_log_old.txt",
                 "/data/vendor/rfs/mpss/modem_efs",
                 "/sys/kernel/debug/ipa/ipa_statistics_msg"
             };
-
-        if (isModemLoggingEnabled()) {
-            if (isModemLoggingRunning()) {
-                ALOGD("diag_mdlog is running");
-            } else {
-                ALOGD("diag_mdlog is not running");
-            }
-
-            dumpLogs(fd, diagLogDir, modemLogAllDir, android::base::GetIntProperty(DIAG_MDLOG_NUMBER_BUGREPORT, 100), DIAG_LOG_PREFIX);
-        }
 
         bool tcpdumpEnabled = android::base::GetBoolProperty(TCPDUMP_PERSIST_PROPERTY, false);
 
@@ -216,23 +218,6 @@ void DumpstateDevice::dumpModem(int fd, int fdModem)
                 "cat /d/ipc_logging/ipa/log > %s/ipa_log",
                 modemLogAllDir.c_str());
         RunCommandToFd(fd, "Dump IPA log", {"/vendor/bin/sh", "-c", cmd});
-
-        // Dump esoc-mdm log
-        snprintf(cmd, sizeof(cmd),
-                "cat /sys/kernel/debug/ipc_logging/esoc-mdm/log > %s/esoc-mdm_log.txt",
-                modemLogAllDir.c_str());
-        RunCommandToFd(fd, "ESOC-MDM LOG", {"/vendor/bin/sh", "-c", cmd});
-
-        // Dump pcie0 log
-        snprintf(cmd, sizeof(cmd),
-                "cat /sys/kernel/debug/ipc_logging/pcie0-long/log > %s/pcie0-long_log.txt",
-                modemLogAllDir.c_str());
-        RunCommandToFd(fd, "PCIE0-LONG LOG", {"/vendor/bin/sh", "-c", cmd});
-
-        snprintf(cmd, sizeof(cmd),
-                "cat /sys/kernel/debug/ipc_logging/pcie0-short/log > %s/pcie0-short_log.txt",
-                modemLogAllDir.c_str());
-        RunCommandToFd(fd, "PCIE0-SHORT LOG", {"/vendor/bin/sh", "-c", cmd});
 
         dumpLogs(fd, extendedLogDir, modemLogAllDir, 100, EXTENDED_LOG_PREFIX);
         android::base::SetProperty(MODEM_EFS_DUMP_PROPERTY, "false");
