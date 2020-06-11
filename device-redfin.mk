@@ -180,10 +180,6 @@ PRODUCT_PACKAGES += \
 # Fingerprint HIDL
 include device/google/redfin/fingerprint.mk
 
-# WLC P9382 firmware
-PRODUCT_COPY_FILES += \
-	$(LOCAL_PATH)/wlc/p9382_fw.bin:$(TARGET_COPY_OUT_VENDOR)/firmware/p9382_fw.bin
-
 # SurfaceFlinger configurations
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_idle_timer_ms=80
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_touch_timer_ms=200
