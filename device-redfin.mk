@@ -17,7 +17,11 @@
 PRODUCT_HARDWARE := redfin
 
 ifeq ($(TARGET_PREBUILT_KERNEL),)
-    LOCAL_KERNEL := device/google/redfin-kernel/Image.lz4
+    ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
+        LOCAL_KERNEL := device/google/redfin-kernel/Image.lz4
+    else
+        LOCAL_KERNEL := device/google/redfin-kernel/vintf/Image.lz4
+    endif
 else
     LOCAL_KERNEL := $(TARGET_PREBUILT_KERNEL)
 endif
@@ -43,6 +47,7 @@ endif
 
 PRODUCT_COPY_FILES += \
     $(foreach f,$(shell find $(LOCAL_PATH)/audio/ -type f -name "mixer_paths*.xml"),$(f):$(TARGET_COPY_OUT_VENDOR)/etc/$(notdir $(f))) \
+    $(LOCAL_PATH)/audio/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
     $(LOCAL_PATH)/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
     $(LOCAL_PATH)/audio/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
     $(LOCAL_PATH)/audio/audio_policy_configuration_a2dp_offload_disabled.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration_a2dp_offload_disabled.xml \
@@ -112,6 +117,14 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.audio.feature.devicestate_listener.enable=true
 
+# Audio Thermal Listener configuration
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/audio/audio_thermal_listener.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_thermal_listener.xml
+
+# Audio Features
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.audio.feature.thermal_listener.enable=true \
+
 ifeq ($(wildcard vendor/google_devices/redfin/proprietary/device-vendor-redfin.mk),)
     BUILD_WITHOUT_VENDOR := true
 endif
@@ -119,12 +132,9 @@ endif
 PRODUCT_PACKAGES += \
     android.hardware.usb@1.2-service.redfin
 
-PRODUCT_PACKAGES += \
-    android.hardware.health@2.0-service.redfin
-
 # Vibrator HAL
 PRODUCT_PACKAGES += \
-    android.hardware.vibrator@1.3-service.redfin
+    android.hardware.vibrator-service.redfin
 
 # DRV2624 Haptics Waveform
 PRODUCT_COPY_FILES += \
@@ -132,15 +142,15 @@ PRODUCT_COPY_FILES += \
 
 # Vibrator HAL
 PRODUCT_PRODUCT_PROPERTIES +=\
-    ro.vibrator.hal.config.dynamic=1 \
-    ro.vibrator.hal.click.duration=8 \
-    ro.vibrator.hal.tick.duration=8 \
-    ro.vibrator.hal.heavyclick.duration=8 \
-    ro.vibrator.hal.short.voltage=161 \
-    ro.vibrator.hal.long.voltage=161 \
-    ro.vibrator.hal.long.frequency.shift=10 \
-    ro.vibrator.hal.steady.shape=1 \
-    ro.vibrator.hal.lptrigger=0
+    ro.vendor.vibrator.hal.config.dynamic=1 \
+    ro.vendor.vibrator.hal.click.duration=6 \
+    ro.vendor.vibrator.hal.tick.duration=6 \
+    ro.vendor.vibrator.hal.heavyclick.duration=6 \
+    ro.vendor.vibrator.hal.short.voltage=161 \
+    ro.vendor.vibrator.hal.long.voltage=161 \
+    ro.vendor.vibrator.hal.long.frequency.shift=10 \
+    ro.vendor.vibrator.hal.steady.shape=1 \
+    ro.vendor.vibrator.hal.lptrigger=0
 
 # Dumpstate HAL
 PRODUCT_PACKAGES += \
@@ -156,8 +166,7 @@ PRODUCT_COPY_FILES += \
 
 # Recovery
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/init.recovery.device.rc:recovery/root/init.recovery.redfin.rc \
-    $(LOCAL_PATH)/thermal-engine-$(PRODUCT_HARDWARE).conf:$(TARGET_COPY_OUT_VENDOR)/etc/thermal-engine-$(PRODUCT_HARDWARE).conf
+    $(LOCAL_PATH)/init.recovery.device.rc:recovery/root/init.recovery.redfin.rc
 
 PRODUCT_PACKAGES += \
     sensors.$(PRODUCT_HARDWARE) \
@@ -170,7 +179,13 @@ PRODUCT_COPY_FILES += \
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
     PRODUCT_COPY_FILES += \
         $(LOCAL_PATH)/init.hardware.chamber.rc.userdebug:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.$(PRODUCT_HARDWARE).chamber.rc
+    PRODUCT_COPY_FILES += \
+	$(LOCAL_PATH)/init.hardware.wlc.rc.userdebug:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.$(PRODUCT_PLATFORM).wlc.rc
 endif
+
+# GPS ANTENNA_INFO configuration file
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/gnss_antenna_info.conf:$(TARGET_COPY_OUT_VENDOR)/etc/gnss_antenna_info.conf
 
 # Audio effects
 PRODUCT_PACKAGES += \
@@ -178,7 +193,9 @@ PRODUCT_PACKAGES += \
 
 # SKU specific RROs
 PRODUCT_PACKAGES += \
-    SettingsOverlayG5NZ6
+    SettingsOverlayG5NZ6 \
+    SettingsOverlayGD1YQ \
+    SettingsOverlayGTT9Q
 
 # Fingerprint HIDL
 include device/google/redfin/fingerprint.mk
@@ -187,7 +204,18 @@ include device/google/redfin/fingerprint.mk
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_idle_timer_ms=80
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_touch_timer_ms=200
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_display_power_timer_ms=1000
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.support_kernel_idle_timer=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.use_content_detection_for_refresh_rate=true
+
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.defer_fps_frame_count=2
 
 # Keyboard height ratio
 PRODUCT_PRODUCT_PROPERTIES += ro.com.google.ime.height_ratio=1.2
+
+# Bluetooth Tx power caps for redfin
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/bluetooth_power_limits_redfin_ROW.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits.csv \
+    $(LOCAL_PATH)/bluetooth_power_limits_redfin_us.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_US.csv \
+    $(LOCAL_PATH)/bluetooth_power_limits_redfin_eu.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_EU.csv \
+    $(LOCAL_PATH)/bluetooth_power_limits_redfin_jp.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_JP.csv
