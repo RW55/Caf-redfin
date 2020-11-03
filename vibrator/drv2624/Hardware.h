@@ -13,20 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ANDROID_HARDWARE_VIBRATOR_HARDWARE_H
-#define ANDROID_HARDWARE_VIBRATOR_HARDWARE_H
+#pragma once
 
 #include "../common/HardwareBase.h"
 #include "Vibrator.h"
 
+namespace aidl {
 namespace android {
 namespace hardware {
 namespace vibrator {
-namespace V1_3 {
-namespace implementation {
-
-using common::implementation::HwApiBase;
-using common::implementation::HwCalBase;
 
 class HwApi : public Vibrator::HwApi, private HwApiBase {
   public:
@@ -73,7 +68,14 @@ class HwApi : public Vibrator::HwApi, private HwApiBase {
         open("device/lra_wave_shape", &mLraWaveShape);
         open("device/od_clamp", &mOdClamp);
         // TODO: for future new architecture: b/149610125
-        openFull("/sys/devices/virtual/thermal/tz-by-name/pa-therm1/temp", &mPATemp);
+        openFull("/sys/devices/virtual/thermal/tz-by-name/pa-therm1/temp",
+                 &mPATemp);
+    }
+
+    template <typename T>
+    void openFull(const std::string &name, T *stream) {
+        saveName(name, stream);
+        utils::openNoCreate(name, stream);
     }
 
   private:
@@ -98,12 +100,14 @@ class HwCal : public Vibrator::HwCal, private HwCalBase {
     static constexpr char AUTOCAL_CONFIG[] = "autocal";
     static constexpr char LRA_PERIOD_CONFIG[] = "lra_period";
     static constexpr char EFFECT_COEFF_CONFIG[] = "haptic_coefficient";
+    static constexpr char EFFECT_TARGET_G[] = "haptic_target_G";
     static constexpr char STEADY_AMP_MAX_CONFIG[] = "vibration_amp_max";
     static constexpr char STEADY_COEFF_CONFIG[] = "vibration_coefficient";
+    static constexpr char STEADY_TARGET_G[] = "vibration_target_G";
 
     static constexpr uint32_t WAVEFORM_CLICK_EFFECT_MS = 6;
     static constexpr uint32_t WAVEFORM_TICK_EFFECT_MS = 2;
-    static constexpr uint32_t WAVEFORM_DOUBLE_CLICK_EFFECT_MS = 144;
+    static constexpr uint32_t WAVEFORM_DOUBLE_CLICK_EFFECT_MS = 159;
     static constexpr uint32_t WAVEFORM_HEAVY_CLICK_EFFECT_MS = 8;
 
     static constexpr uint32_t DEFAULT_LRA_PERIOD = 262;
@@ -128,6 +132,12 @@ class HwCal : public Vibrator::HwCal, private HwCalBase {
         }
         return false;
     }
+    bool getEffectTargetG(std::array<float, 5> *value) override {
+      if (getPersist(EFFECT_TARGET_G, value)) {
+        return true;
+      }
+      return false;
+    }
     bool getSteadyAmpMax(float *value) override {
         if (getPersist(STEADY_AMP_MAX_CONFIG, value)) {
             return true;
@@ -139,6 +149,12 @@ class HwCal : public Vibrator::HwCal, private HwCalBase {
             return true;
         }
         return false;
+    }
+    bool getSteadyTargetG(std::array<float, 3> *value) override {
+      if (getPersist(STEADY_TARGET_G, value)) {
+        return true;
+      }
+      return false;
     }
     bool getCloseLoopThreshold(uint32_t *value) override {
         return getProperty("closeloop.threshold", value, UINT32_MAX);
@@ -178,13 +194,14 @@ class HwCal : public Vibrator::HwCal, private HwCalBase {
     bool getTriggerEffectSupport(uint32_t *value) override {
         return getProperty("lptrigger", value, DEFAULT_LP_TRIGGER_SUPPORT);
     }
+    bool getDevHwVer(std::string *value) override {
+      *value = ::android::base::GetProperty("ro.revision", "DVT");
+      return true;
+    }
     void debug(int fd) override { HwCalBase::debug(fd); }
 };
 
-}  // namespace implementation
-}  // namespace V1_3
 }  // namespace vibrator
 }  // namespace hardware
 }  // namespace android
-
-#endif  // ANDROID_HARDWARE_VIBRATOR_HARDWARE_H
+}  // namespace aidl

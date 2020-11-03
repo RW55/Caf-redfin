@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ANDROID_HARDWARE_VIBRATOR_V1_3_VIBRATOR_H
-#define ANDROID_HARDWARE_VIBRATOR_V1_3_VIBRATOR_H
+#pragma once
 
-#include <android/hardware/vibrator/1.3/IVibrator.h>
-#include <hidl/Status.h>
+#include <aidl/android/hardware/vibrator/BnVibrator.h>
 
 #include <fstream>
 
+namespace aidl {
 namespace android {
 namespace hardware {
 namespace vibrator {
-namespace V1_3 {
-namespace implementation {
 
-class Vibrator : public IVibrator {
+class Vibrator : public BnVibrator {
   public:
     // APIs for interfacing with the kernel driver.
     class HwApi {
@@ -97,10 +94,14 @@ class Vibrator : public IVibrator {
         virtual bool getLraPeriod(uint32_t *value) = 0;
         // Obtains the effect coeffs to calculate the target voltage
         virtual bool getEffectCoeffs(std::array<float, 4> *value) = 0;
+        // Obtains the external effect target G
+        virtual bool getEffectTargetG(std::array<float, 5> *value) = 0;
         // Obtain the max steady G value
         virtual bool getSteadyAmpMax(float *value) = 0;
         // Obtains the steady coeffs to calculate the target voltage
         virtual bool getSteadyCoeffs(std::array<float, 4> *value) = 0;
+        // Obtains the external steady target G
+        virtual bool getSteadyTargetG(std::array<float, 3> *value) = 0;
         // Obtains threshold in ms, above which close-loop should be used.
         virtual bool getCloseLoopThreshold(uint32_t *value) = 0;
         // Obtains dynamic/static configuration choice.
@@ -125,6 +126,8 @@ class Vibrator : public IVibrator {
         virtual bool getSteadyShape(uint32_t *value) = 0;
         // Obtains the trigger effect support
         virtual bool getTriggerEffectSupport(uint32_t *value) = 0;
+        // Obtains device hardware version
+        virtual bool getDevHwVer(std::string *value) = 0;
         // Emit diagnostic information to the given file.
         virtual void debug(int fd) = 0;
     };
@@ -156,35 +159,34 @@ class Vibrator : public IVibrator {
   public:
     Vibrator(std::unique_ptr<HwApi> hwapi, std::unique_ptr<HwCal> hwcal);
 
-    // Methods from ::android::hardware::vibrator::V1_0::IVibrator follow.
-    using Status = ::android::hardware::vibrator::V1_0::Status;
-    Return<Status> on(uint32_t timeoutMs) override;
-    Return<Status> off() override;
-    Return<bool> supportsAmplitudeControl() override;
-    Return<Status> setAmplitude(uint8_t amplitude) override;
+    ndk::ScopedAStatus getCapabilities(int32_t *_aidl_return) override;
+    ndk::ScopedAStatus off() override;
+    ndk::ScopedAStatus on(int32_t timeoutMs,
+                          const std::shared_ptr<IVibratorCallback> &callback) override;
+    ndk::ScopedAStatus perform(Effect effect, EffectStrength strength,
+                               const std::shared_ptr<IVibratorCallback> &callback,
+                               int32_t *_aidl_return) override;
+    ndk::ScopedAStatus getSupportedEffects(std::vector<Effect> *_aidl_return) override;
+    ndk::ScopedAStatus setAmplitude(float amplitude) override;
+    ndk::ScopedAStatus setExternalControl(bool enabled) override;
+    ndk::ScopedAStatus getCompositionDelayMax(int32_t *maxDelayMs);
+    ndk::ScopedAStatus getCompositionSizeMax(int32_t *maxSize);
+    ndk::ScopedAStatus getSupportedPrimitives(std::vector<CompositePrimitive> *supported) override;
+    ndk::ScopedAStatus getPrimitiveDuration(CompositePrimitive primitive,
+                                            int32_t *durationMs) override;
+    ndk::ScopedAStatus compose(const std::vector<CompositeEffect> &composite,
+                               const std::shared_ptr<IVibratorCallback> &callback) override;
+    ndk::ScopedAStatus getSupportedAlwaysOnEffects(std::vector<Effect> *_aidl_return) override;
+    ndk::ScopedAStatus alwaysOnEnable(int32_t id, Effect effect, EffectStrength strength) override;
+    ndk::ScopedAStatus alwaysOnDisable(int32_t id) override;
 
-    // Methods from ::android::hardware::vibrator::V1_3::IVibrator follow.
-    Return<bool> supportsExternalControl() override;
-    Return<Status> setExternalControl(bool enabled) override;
-
-    using EffectStrength = ::android::hardware::vibrator::V1_0::EffectStrength;
-    Return<void> perform(V1_0::Effect effect, EffectStrength strength,
-                         perform_cb _hidl_cb) override;
-    Return<void> perform_1_1(V1_1::Effect_1_1 effect, EffectStrength strength,
-                             perform_cb _hidl_cb) override;
-    Return<void> perform_1_2(V1_2::Effect effect, EffectStrength strength,
-                             perform_cb _hidl_cb) override;
-    Return<void> perform_1_3(Effect effect, EffectStrength strength, perform_cb _hidl_cb) override;
-
-    // Methods from ::android.hidl.base::V1_0::IBase follow.
-    Return<void> debug(const hidl_handle &handle, const hidl_vec<hidl_string> &options) override;
+    binder_status_t dump(int fd, const char **args, uint32_t numArgs) override;
 
   private:
-    Return<Status> on(uint32_t timeoutMs, const char mode[],
-                      const std::unique_ptr<VibrationConfig> &config, const int8_t volOffset);
-    template <typename T>
-    Return<void> performWrapper(T effect, EffectStrength strength, perform_cb _hidl_cb);
-    Return<void> performEffect(Effect effect, EffectStrength strength, perform_cb _hidl_cb);
+    ndk::ScopedAStatus on(uint32_t timeoutMs, const char mode[],
+                          const std::unique_ptr<VibrationConfig> &config, const int8_t volOffset);
+    ndk::ScopedAStatus performEffect(Effect effect, EffectStrength strength, int32_t *outTimeMs);
+
     std::unique_ptr<HwApi> mHwApi;
     std::unique_ptr<HwCal> mHwCal;
     uint32_t mCloseLoopThreshold;
@@ -201,10 +203,7 @@ class Vibrator : public IVibrator {
     bool mDynamicConfig;
 };
 
-}  // namespace implementation
-}  // namespace V1_3
 }  // namespace vibrator
 }  // namespace hardware
 }  // namespace android
-
-#endif  // ANDROID_HARDWARE_VIBRATOR_V1_3_VIBRATOR_H
+}  // namespace aidl
